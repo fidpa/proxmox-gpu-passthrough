@@ -64,5 +64,5 @@ The most useful contribution would explicitly contrast the Consumer-Ada / Consum
 ## References
 
 - NVIDIA GeForce GPU Passthrough for Windows VM (Beta): <https://nvidia.custhelp.com/app/answers/detail/a_id/5173/> — Driver R465 (April 2021) introduced official support
-- Proxmox Forum PCI Passthrough category: <https://forum.proxmox.com/forums/pci-passthrough.117/>
-- Level1Techs VFIO category (lots of Consumer-card threads): <https://forum.level1techs.com/c/software/linux/vfio-passthrough>
+- Proxmox Forum (search for "PCI passthrough"): <https://forum.proxmox.com/forums/>
+- Level1Techs VFIO category (lots of Consumer-card threads): <https://forum.level1techs.com/c/software/linux/vfio-passthrough/146>

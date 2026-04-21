@@ -144,8 +144,8 @@ Before committing to the full-passthrough path, consider the alternatives:
 |----------|--------------|--------------------------|
 | **VirtIO-GPU** (paravirt, QEMU-native) | 2D desktop acceleration, basic 3D via Virgil3D, multiple guests sharing transparently; no hypervisor hiding needed | Different failure modes — generic virt stack, not this repo's focus |
 | **VirGL-GPU** (Linux guests only) | Multiple Linux VMs sharing host OpenGL rendering | Guest-OS-limited (Windows has no VirGL path) |
-| **SR-IOV / vGPU / GVT-g / MxGPU** (mediated devices) | Splitting one enterprise GPU into multiple VFs, each assigned to a different VM | Scope is "full passthrough recipes"; see [Proxmox Wiki § Mediated Devices](https://pve.proxmox.com/wiki/MediatedDevices_(vGPU)) |
-| **LXC container GPU** | AI inference / compute workloads that don't need a full guest OS (no Windows drivers, no desktop) | Different mechanism entirely (bind-mount `/dev/dri`, `/dev/nvidia*` etc.); see [Proxmox Wiki § LXC + GPU](https://pve.proxmox.com/wiki/PCI_Passthrough) |
+| **SR-IOV / vGPU / GVT-g / MxGPU** (mediated devices) | Splitting one enterprise GPU into multiple VFs, each assigned to a different VM | Scope is "full passthrough recipes"; see [Proxmox VE Admin Guide § Mediated Devices](https://pve.proxmox.com/pve-docs/chapter-qm.html#qm_pci_passthrough_mediated_devices) |
+| **LXC container GPU** | AI inference / compute workloads that don't need a full guest OS (no Windows drivers, no desktop) | Different mechanism entirely (bind-mount `/dev/dri`, `/dev/nvidia*` etc.); see [Proxmox Wiki § PCI(e) Passthrough](https://pve.proxmox.com/wiki/PCI(e)_Passthrough) |
 | **Full PCI(e) passthrough** (this repo) | Gaming, CAD, Windows driver quirks, exclusive GPU access, ML-training VMs | — |
 
 Rule of thumb: if you're **not** hitting driver-side anti-VM checks (Code 43), WDDM interface mismatches, or reset bugs, you probably don't need this repo — VirtIO-GPU or a mediated device is lighter-weight. If you **are** hitting those, welcome in.

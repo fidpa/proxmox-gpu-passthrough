@@ -99,5 +99,5 @@ If fans stay full after driver loads:
 
 1. Run `./scripts/collect-diagnostics.sh <vmid>` — bundles IOMMU groups, VFIO state, VM config, dmesg
 2. Open an issue with the bundle attached (sanitize IPs/hostnames first)
-3. Check [Proxmox Forum PCI Passthrough category](https://forum.proxmox.com/forums/pci-passthrough.117/) — lots of historical threads
-4. For AMD: [Level1Techs Forum VFIO category](https://forum.level1techs.com/c/software/linux/vfio-passthrough)
+3. Check the [Proxmox Forum](https://forum.proxmox.com/forums/) — search for "PCI passthrough" / "VFIO" — lots of historical threads
+4. For AMD / VFIO deep-dives: [Level1Techs Forum VFIO category](https://forum.level1techs.com/c/software/linux/vfio-passthrough/146)
