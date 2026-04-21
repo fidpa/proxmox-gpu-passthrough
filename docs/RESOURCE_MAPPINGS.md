@@ -120,8 +120,8 @@ All recipes in this repo use physical BDFs because the validation host is standa
 
 ## References (primary sources)
 
-- Proxmox Wiki § Resource Mapping: <https://pve.proxmox.com/wiki/Resource_Mapping>
-- Proxmox Wiki § PCI Passthrough: <https://pve.proxmox.com/wiki/PCI_Passthrough>
+- Proxmox VE Admin Guide § Resource Mapping: <https://pve.proxmox.com/pve-docs/chapter-qm.html#resource_mapping>
+- Proxmox Wiki § PCI(e) Passthrough: <https://pve.proxmox.com/wiki/PCI(e)_Passthrough>
 - `man qm` § `--hostpci[n]` (`mapping=` option) — run on any Proxmox host
 - `man pvesh` and `pvesh help /cluster/mapping/pci` — self-documenting on any Proxmox host
 - Proxmox API viewer: <https://pve.proxmox.com/pve-docs/api-viewer/> → `/cluster/mapping/pci`, `/cluster/mapping/usb`
