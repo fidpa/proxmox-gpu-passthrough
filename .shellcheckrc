@@ -1,0 +1,31 @@
+# .shellcheckrc - proxmox-gpu-passthrough
+# ShellCheck 0.9.0+ configuration
+#
+# References:
+# - https://www.shellcheck.net/wiki/Directive
+# - https://www.shellcheck.net/wiki/Optional
+
+# ============================================================================
+# DISABLED CHECKS
+# ============================================================================
+
+# SC1090: Can't follow non-constant source
+# SC1091: Not following sourced file
+# Rationale: scripts may source files via dynamic paths
+#            (e.g. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/…").
+#            shellcheck cannot resolve these at static analysis time.
+disable=SC1090,SC1091
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+# Shell dialect
+shell=bash
+
+# Allow following source statements where the path is resolvable
+source-path=SCRIPTDIR
+external-sources=true
+
+# Minimum severity threshold
+severity=warning

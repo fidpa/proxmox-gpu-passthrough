@@ -1,0 +1,40 @@
+# Private instructions / drafts (never commit)
+CLAUDE.md
+LINKEDIN_POST.md
+REDDIT_POST.md
+TODO.md
+NOTES.md
+*.local
+*.private
+*.draft
+
+# Secrets & credentials
+.env
+.env.secrets
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+passwords.txt
+secrets.txt
+id_rsa
+id_ed25519
+
+# Test outputs
+test-output/
+test-results/
+*.log
+capability-probe-output-*.txt
+dxdiag-*.txt
+
+# Editor / OS
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Build artifacts
+dist/
+*.tar.gz
