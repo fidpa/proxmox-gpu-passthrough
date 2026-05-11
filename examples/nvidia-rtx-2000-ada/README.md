@@ -2,23 +2,31 @@
 
 Placeholder slot for the NVIDIA RTX 2000 Ada (Professional / Workstation, Ada-Generation, 16 GB GDDR6 ECC) passthrough recipe — will land here once the card has run an ML-inference workload for ≥2 weeks.
 
-> **Status**: 🚧 **Planned** — target hardware on the procurement path. Will share a workstation with the [RTX PRO 4500 Blackwell](../nvidia-rtx-pro-4500-blackwell/) (two Pro cards, one host, ML-inference workload).
+> **Status**: 🚧 **In validation** — hardware installed 2026-05-11, passthrough active, ≥2-week production uptime still accumulating. Will share a host with the [RTX PRO 4500 Blackwell](../nvidia-rtx-pro-4500-blackwell/) once that card is installed.
 
-## Why Placeholder
+## Why Still a Placeholder
 
-This repo's rule is **no vendor recipe without ≥2 weeks of production validation on real hardware** (see [CONTRIBUTING.md](../../CONTRIBUTING.md)). The RTX 2000 Ada will be installed in a workstation alongside the RTX PRO 4500 Blackwell (32 GB GDDR7) and used for ML inference. Once the card has ≥2 weeks of uptime under real workload, the recipe lands here.
+This repo's rule is **no vendor recipe without ≥2 weeks of production validation on real hardware** (see [CONTRIBUTING.md](../../CONTRIBUTING.md)). The first session (2026-05-11) confirmed the passthrough works and the config shape below is correct. The full recipe lands here once ≥2 weeks of ML-inference workload have elapsed.
 
-## Anticipated Config Shape
+## Confirmed Config Shape
+
+Validated on Proxmox VE 9.1.1 / kernel 6.17.2-1-pve, AMD Ryzen 9 9900X host, Ubuntu 24.04 guest:
 
 ```
-args: (none expected -- Pro cards do NOT need kvm=off / -hypervisor)
-machine: pc-q35-9.2
+args: (none -- Pro cards do NOT need kvm=off / -hypervisor)
+machine: q35
 bios: ovmf
 cpu: host
 balloon: 0
 vga: none
-hostpci0: 0000:<BDF>,pcie=1,x-vga=0
+hostpci0: 0000:02:00,pcie=1
 ```
+
+Notes on the config:
+- **No function suffix on `hostpci0`**: `0000:02:00` (without `.0`) attaches all functions at once — GPU (`02:00.0`, `10de:28b0`) + audio companion (`02:00.1`, `10de:22be`) in a single line.
+- **`vga: none`**: headless VM (RDP/SSH access). If you need noVNC fallback, use `--vga virtio` alongside the hostpci entry.
+- **`cpu: host`**: mandatory for CUDA workloads (AVX2, AVX-512). `x86-64-v3` is insufficient.
+- **`balloon: 0`**: required with any GPU passthrough; the balloon driver's memory paging is incompatible with DMA from the passed-through device.
 
 Key difference vs the Intel Arc example: **no `-hypervisor` flag**. NVIDIA Pro drivers expect to see KVM. Hiding the hypervisor would disable vGPU features and confuse the enterprise driver.
 

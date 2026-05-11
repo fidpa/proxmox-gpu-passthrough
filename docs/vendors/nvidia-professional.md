@@ -53,13 +53,16 @@ Pro card passthrough often works with a **vanilla** QEMU config. Applying the Co
 
 ## RTX 2000 Ada — Hardware Notes (Ada-Generation Pro)
 
-- **Vendor:Device ID**: `10de:???` — to be confirmed from actual card
-- **Architecture**: Ada Lovelace (AD107)
+- **Vendor:Device ID**: GPU `10de:28b0`, Audio companion `10de:22be` (AD107 High Definition Audio Controller) — confirmed from hardware 2026-05-11
+- **Architecture**: Ada Lovelace (AD107), CUDA compute capability 8.9
 - **TDP**: 70 W — low-profile, single-slot, no external power connector
 - **VRAM**: 16 GB GDDR6 with ECC
 - **PCIe**: 4.0 x8 (physical x16 slot)
 - **Expected workload**: ML inference (smaller models, fp16 / int8 inference, classical CV)
 - **Why included**: Reference point for the Ada Pro lineage; low TDP makes it the "always-on" card alongside the Blackwell PRO 4500.
+- **Observed (2026-05-11)**: GPU was `(unbound)` on the Proxmox host out of the box — `nouveau` and `nvidiafb` listed as available modules but did not claim the device. The `softdep nouveau pre: vfio-pci` in `modprobe.d` is still recommended for robustness. Audio companion `02:00.1` had `snd_hda_intel` and required explicit unbind before VFIO could claim it.
+- **Driver confirmed**: `nvidia-driver-595-server` (Ubuntu 24.04 guest) — CUDA 13.2, `nvidia-smi` working inside Docker container via nvidia-container-toolkit 1.19.0.
+- **Container toolkit note**: Ubuntu 24.04 standard apt repos do **not** contain `nvidia-container-toolkit`. Must use NVIDIA's own apt repository (`nvidia.github.io/libnvidia-container`); the Ubuntu package appears to install but places no binaries.
 
 ## RTX PRO 4500 Blackwell — Hardware Notes (Blackwell-Generation Pro)
 
