@@ -16,7 +16,7 @@ Battle-tested PCIe passthrough recipes for Proxmox VE — with focus on **the fa
 |-----|--------|--------|-----------|
 | **Intel Arc A310 (DG2)** | Intel | 🚧 In validation (promotes to ✅ on 2026-05-04) | Proxmox VE 9.1, kernel 6.17.x, Windows 11 Pro 25H2 — initial config verified 2026-04-20 |
 | **NVIDIA RTX 2000 Ada** | NVIDIA Professional (Ada) | 🚧 In validation | Proxmox VE 9.1.1, kernel 6.17.2-1-pve, Ubuntu 24.04 guest — initial config verified 2026-05-11 |
-| **NVIDIA RTX PRO 4500 Blackwell (32 GB)** | NVIDIA Professional (Blackwell) | 🚧 Planned | — |
+| **NVIDIA RTX PRO 4500 Blackwell (32 GB)** | NVIDIA Professional (Blackwell) | 🚧 In validation | Proxmox VE 9.1.1, kernel 6.17.2-1-pve, Ubuntu 24.04 guest — initial config verified 2026-05-15 |
 | **AMD (Polaris/Navi)** | AMD | 📋 Backlog (Reset Bug Research) | — |
 
 > **NVIDIA Consumer (GeForce RTX 40 / 50-series)** intentionally not in the planned set. Consumer-tier passthrough is already represented by the **Intel Arc A310** entry above — it shows the harder failure modes (Code-43, CPUID hiding, INF gotcha) on a Consumer-class card. A separate NVIDIA-Consumer recipe is welcome from contributors with real ≥2-week production passthrough on Ada / Blackwell GeForce hardware — see [docs/vendors/nvidia-consumer.md](docs/vendors/nvidia-consumer.md).

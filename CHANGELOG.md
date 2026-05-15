@@ -13,12 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NVIDIA RTX 2000 Ada + RTX PRO 4500 Blackwell recipes (two Pro cards, same workstation, ML-inference workload — promote to ✅ after each clears its own ≥2-week threshold).
 - `vendor-reset` installation guide for Blackwell WPR2 reset bug — once Blackwell support in `gnif/vendor-reset` is confirmed.
 
+## [1.2.0] — 2026-05-15
+
 ### Added
-- `docs/TROUBLESHOOTING.md`: new section "NVIDIA Blackwell: GPU Failed to Initialize on Second VM Start (WPR2 Reset Bug)" — root cause (GSP firmware WPR2 persists through PCIe FLR), contrast with AMD Reset Bug, short-term fix (host reboot), long-term fix pointer (`vendor-reset`).
-- `docs/vendors/nvidia-professional.md`: new subsection "Confirmed: Dual GPU to Same Linux VM — Docker Container Isolation" — documents `NVIDIA_VISIBLE_DEVICES` per-container GPU assignment, passthrough order (hostpci1 → GPU 0), verification commands, WPR2 cross-reference. Confirmed 2026-05-15 with RTX PRO 4500 + RTX 2000 Ada in simultaneous operation.
+- `docs/TROUBLESHOOTING.md`: new section "NVIDIA Blackwell: GPU Failed to Initialize on Second VM Start (WPR2 Reset Bug)" — root cause (GSP firmware WPR2 persists through PCIe FLR), contrast with AMD Reset Bug (comparison table), short-term fix (host reboot), long-term fix pointer (`vendor-reset`).
+- `docs/vendors/nvidia-professional.md`: new subsection "Confirmed: Dual GPU to Same Linux VM — Docker Container Isolation" — documents `NVIDIA_VISIBLE_DEVICES` per-container GPU assignment, passthrough order (`hostpci1` → GPU 0), verification commands, WPR2 cross-reference. Confirmed 2026-05-15 with RTX PRO 4500 + RTX 2000 Ada in simultaneous production operation.
 
 ### Changed
-- `docs/vendors/nvidia-professional.md`, RTX 2000 Ada section: driver updated to `nvidia-driver-595-server-open` (open kernel modules required for Ada Lovelace on this driver branch, same requirement as Blackwell); added dual-GPU-confirmed note; added `qm set` / `vfio.conf` independence gotcha (host VFIO binding and VM hostpci config are two independent steps).
+- `docs/vendors/nvidia-professional.md`, RTX 2000 Ada: driver corrected to `nvidia-driver-595-server-open` (open kernel modules required for Ada Lovelace on this driver branch — same requirement as Blackwell, not only Blackwell as previously implied); added dual-GPU-confirmed note; added `qm set` / `vfio.conf` independence gotcha.
+- `README.md`: RTX PRO 4500 Blackwell status corrected from `🚧 Planned` to `🚧 In validation` with hardware details — this promotion was done in v1.1.0 but the README table was not updated.
 
 ## [1.1.0] — 2026-05-15
 
