@@ -1,6 +1,6 @@
 # Intel Arc (DG2) — Full Recipe
 
-> 🚧 **Status**: In validation (initial config verified 2026-04-20 on ASRock Intel Arc A310 Low Profile 4GB, Proxmox VE 9.1 kernel 6.17.x, Windows 11 Pro 25H2, Intel Graphics Driver 32.0.101.8629). Promotes to ✅ Production on **2026-05-04** once the ≥2-week uptime threshold defined in [CONTRIBUTING.md § 1](../../CONTRIBUTING.md#1-no-vendor-recipe-without-2-weeks-production) is met. First-boot success is necessary but not sufficient — this notice exists because the repo applies its own rule to its own author.
+> ✅ **Status**: Production (promoted 2026-05-15 — ≥2-week uptime threshold confirmed). Initial config verified 2026-04-20 on ASRock Intel Arc A310 Low Profile 4GB, Proxmox VE 9.1 kernel 6.17.x, Windows 11 Pro 25H2, Intel Graphics Driver 32.0.101.8629.
 
 ## TL;DR
 

@@ -14,7 +14,7 @@ Battle-tested PCIe passthrough recipes for Proxmox VE — with focus on **the fa
 
 | GPU | Vendor | Status | Proven On |
 |-----|--------|--------|-----------|
-| **Intel Arc A310 (DG2)** | Intel | 🚧 In validation (promotes to ✅ on 2026-05-04) | Proxmox VE 9.1, kernel 6.17.x, Windows 11 Pro 25H2 — initial config verified 2026-04-20 |
+| **Intel Arc A310 (DG2)** | Intel | ✅ Production | Proxmox VE 9.1, kernel 6.17.x, Windows 11 Pro 25H2 — promoted 2026-05-15 (≥2-week uptime confirmed) |
 | **NVIDIA RTX 2000 Ada** | NVIDIA Professional (Ada) | 🚧 In validation | Proxmox VE 9.1.1, kernel 6.17.2-1-pve, Ubuntu 24.04 guest — initial config verified 2026-05-11 |
 | **NVIDIA RTX PRO 4500 Blackwell (32 GB)** | NVIDIA Professional (Blackwell) | 🚧 In validation | Proxmox VE 9.1.1, kernel 6.17.2-1-pve, Ubuntu 24.04 guest — initial config verified 2026-05-15 |
 | **AMD (Polaris/Navi)** | AMD | 📋 Backlog (Reset Bug Research) | — |
@@ -25,8 +25,9 @@ Battle-tested PCIe passthrough recipes for Proxmox VE — with focus on **the fa
 
 ## Roadmap
 
-- **NVIDIA RTX 2000 Ada (Professional, Ada-Generation)** — full recipe once the card runs ML-inference workload ≥2 weeks. Anticipated flag-set: minimal (no hypervisor-hiding — Pro cards expect KVM visible). Ada-generation reference point for the Pro lineage.
-- **NVIDIA RTX PRO 4500 Blackwell (Professional, Blackwell-Generation, 32 GB GDDR7)** — second Pro card, planned for the same workstation alongside the RTX 2000 Ada. Recipe focus: ReBAR negotiation on a full 32 GB BAR, PCIe 5.0 link training, ECC + NVENC behaviour on the RTX Enterprise driver branch. Same `nvidia-pro` profile as RTX 2000 Ada (no hypervisor-hiding) but Blackwell silicon brings Consumer-Blackwell-style PCIe quirks.
+- **Intel Arc A310** — ✅ promoted to Production 2026-05-15 (≥2-week uptime confirmed).
+- **NVIDIA RTX 2000 Ada** — 🚧 in validation since 2026-05-11. ML-inference workload running (PaddleOCR GPU). Flag-set confirmed minimal (no hypervisor-hiding). Full recipe after ≥2-week threshold (2026-05-25).
+- **NVIDIA RTX PRO 4500 Blackwell (32 GB GDDR7)** — 🚧 in validation since 2026-05-15, same workstation as RTX 2000 Ada. Ollama VLM workload running. Key open finding: WPR2 reset bug (host reboot required after VM stop — `vendor-reset` Blackwell support TBD). ReBAR on full 32 GB BAR and PCIe 5.0 link training not yet verified under load. Full recipe after ≥2-week threshold (2026-05-29).
 - **AMD (Polaris / Navi / RDNA)** — backlog; contingent on test hardware access and on `vendor-reset` kernel module compatibility with current kernels.
 
 ## Features
@@ -83,17 +84,21 @@ powershell.exe -File capability-probe.ps1
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Why passthrough fails — CPUID, IOMMU, BAR, Reset-Bug overview |
 | [docs/HOST_SETUP.md](docs/HOST_SETUP.md) | One-time Proxmox host preparation (IOMMU, VFIO, module blacklists) |
 | [docs/VM_CONFIG.md](docs/VM_CONFIG.md) | `q35`, OVMF, `balloon: 0`, `vga: none`, `cpu: host`, hookscripts |
-| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Symptom-driven matrix — Code 43, MBDA fallback, reset failures |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Symptom-driven matrix — Code 43, MBDA fallback, WPR2 reset (Blackwell), open-module requirement (Ada/Blackwell) |
 | [docs/RESOURCE_MAPPINGS.md](docs/RESOURCE_MAPPINGS.md) | Cluster-aware passthrough via logical mapping names (Proxmox VE 8+); required for HA with passthrough |
-| [docs/vendors/intel-arc-dg2.md](docs/vendors/intel-arc-dg2.md) | 🚧 Intel Arc A310 full recipe (Code-43-fix, INF gotcha) — in 2-week validation |
-| [docs/vendors/nvidia-professional.md](docs/vendors/nvidia-professional.md) | 🚧 RTX 2000 Ada + RTX PRO 4500 Blackwell — planned (two Pro cards, same workstation) |
+| [docs/vendors/intel-arc-dg2.md](docs/vendors/intel-arc-dg2.md) | ✅ Intel Arc A310 full recipe (Code-43-fix, INF gotcha) — production |
+| [docs/vendors/nvidia-professional.md](docs/vendors/nvidia-professional.md) | 🚧 RTX 2000 Ada + RTX PRO 4500 Blackwell — in validation (two Pro cards, same VM, dual-GPU confirmed) |
 | [docs/vendors/amd.md](docs/vendors/amd.md) | 📋 Reset Bug + `vendor-reset` kernel module — backlog |
 
 > The Consumer-tier perspective is covered by the **Intel Arc A310** entry. A NVIDIA-GeForce-specific stub for contributors lives at [docs/vendors/nvidia-consumer.md](docs/vendors/nvidia-consumer.md).
 
-## The One Thing Most Guides Miss
+## The Things Most Guides Miss
 
 For **Intel Arc**: `kvm=off` alone is not enough. The Windows driver checks CPUID leaf `0x1` ECX bit 31 (Hypervisor-Running flag) independently of the KVM signature in leaf `0x40000000`. You need **both** `kvm=off` **and** `-hypervisor` to pass the WDDM interface negotiation. See [docs/vendors/intel-arc-dg2.md § Code-43-Fix](docs/vendors/intel-arc-dg2.md#code-43-fix) for the full CPUID mechanics.
+
+For **NVIDIA Blackwell / Ada Lovelace**: `nvidia-driver-XXX-server` (the standard package) silently fails with `RmInitAdapter (0x22:0x56:1017)`. These architectures require the **open kernel module** variant (`nvidia-driver-XXX-server-open`). `nvidia-smi` reports "No devices found" even with the module loaded — which looks exactly like a VFIO binding problem, sending you down the wrong debug path. See [docs/TROUBLESHOOTING.md § nvidia-smi Reports "No devices found"](docs/TROUBLESHOOTING.md#nvidia-smi-reports-no-devices-found-linux-guest--blackwell--ada).
+
+For **NVIDIA Blackwell specifically**: the GPU does not survive a VM stop/start cycle without a full host reboot. PCIe FLR is insufficient to reset the GSP firmware's WPR2 state. This hits you on the second VM boot, not the first — so first-boot success is a false signal. See [docs/TROUBLESHOOTING.md § WPR2 Reset Bug](docs/TROUBLESHOOTING.md#nvidia-blackwell-gpu-failed-to-initialize-on-second-vm-start-wpr2-reset-bug).
 
 ## Prerequisites
 

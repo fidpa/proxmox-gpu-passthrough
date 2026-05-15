@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned
 - Extend `collect-diagnostics.sh` sanitizer to mask IPv4/IPv6, hardware/BIOS UUIDs, and usernames in paths — once enough real-world diag bundles surface the common patterns.
-- Promote Intel Arc A310 recipe from 🚧 to ✅ once the ≥2-week production-uptime threshold is confirmed met.
 - NVIDIA RTX 2000 Ada + RTX PRO 4500 Blackwell recipes (two Pro cards, same workstation, ML-inference workload — promote to ✅ after each clears its own ≥2-week threshold).
 - `vendor-reset` installation guide for Blackwell WPR2 reset bug — once Blackwell support in `gnif/vendor-reset` is confirmed.
+
+### Changed
+- Intel Arc A310: promoted from 🚧 In validation → ✅ Production (2026-05-15 — ≥2-week uptime confirmed). Status updated in `README.md`, `docs/vendors/intel-arc-dg2.md`, and documentation table.
 
 ## [1.2.0] — 2026-05-15
 
