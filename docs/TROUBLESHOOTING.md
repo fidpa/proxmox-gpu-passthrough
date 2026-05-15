@@ -50,7 +50,46 @@ Typically **AMD Reset Bug**. The GPU was left in an unreclaimable state after th
 | AMD Polaris (RX 4xx/5xx) | Install [vendor-reset](https://github.com/gnif/vendor-reset) kernel module |
 | AMD Navi (RX 5xxx) | Install `vendor-reset` (Navi-specific reset sequence) |
 | AMD RDNA 2+ (RX 6xxx/7xxx) | Usually better behaved, but `vendor-reset` still recommended |
-| Intel / NVIDIA | Not a Reset Bug — check dmesg for specific error |
+| Intel / NVIDIA | Not a Reset Bug — check dmesg for specific error (see WPR2 section below for Blackwell) |
+
+## NVIDIA Blackwell: "GPU Failed to Initialize" on Second VM Start (WPR2 Reset Bug)
+
+**Symptom**: VM starts cleanly the first time. After VM shutdown and restart, the GPU fails to initialize. `dmesg` in the guest shows errors during `nvidia.ko` load; the guest sees the GPU but NVIDIA driver can't bring it up. `nvidia-smi` returns `Failed to initialize NVML: Driver/library version mismatch` or hangs. The Proxmox host is not hung — only the passthrough GPU is unrecoverable without a host reboot.
+
+**Root cause**: NVIDIA Blackwell GPUs use a **GSP (GPU System Processor)** firmware that maintains a **Write-Protected Region 2 (WPR2)**. When the VM shuts down, the GSP firmware does not fully reset — its WPR2 state persists in the GPU's on-chip SRAM across PCIe FLR (Function Level Reset). The next VM boot sees the GPU with leftover firmware state and can't re-initialize from scratch.
+
+This is distinct from the AMD Reset Bug (different mechanism, different fix):
+
+| Aspect | AMD Reset Bug | NVIDIA Blackwell WPR2 Bug |
+|--------|--------------|--------------------------|
+| Trigger | GPU left in bad state after any VM exit | GSP firmware WPR2 persists through PCIe FLR |
+| Host hangs? | Yes — host often deadlocks | No — host is fine, only GPU unusable |
+| PCIe FLR fix? | Sometimes | No — FLR is insufficient |
+| D3cold (power-cycle via PCIe) | Not always supported | Not supported on most desktop platforms |
+| Fix | `vendor-reset` kernel module | Full host reboot (short-term); `vendor-reset` Blackwell support (long-term — check [gnif/vendor-reset](https://github.com/gnif/vendor-reset) issues for Blackwell status) |
+
+**Short-term fix** (confirmed working):
+
+```bash
+# From the Proxmox host — issue a full reboot
+# (A VM stop/start cycle is NOT enough; the GPU needs power-cycle via host reboot)
+ssh proxmox-host "nohup reboot &"
+```
+
+After the host reboots, the GPU resets cleanly and the VM starts normally again.
+
+**Long-term fix**: Install [gnif/vendor-reset](https://github.com/gnif/vendor-reset) as a DKMS module on the Proxmox host. `vendor-reset` implements GPU-family-specific reset sequences that go beyond PCIe FLR. Check the issue tracker for Blackwell (GB2xx/GB3xx) support status — Ada Lovelace support is available, Blackwell may require a newer version.
+
+```bash
+# On Proxmox host:
+apt install dkms git
+git clone https://github.com/gnif/vendor-reset.git
+cd vendor-reset && dkms install .
+modprobe vendor_reset
+# Verify: dmesg | grep vendor_reset
+```
+
+The Proxmox `reset-method` hookscript (`hookscripts/reset-method.sh` in this repo) plugs into vendor-reset automatically if the module is present.
 
 ## Wrong VRAM Reported
 

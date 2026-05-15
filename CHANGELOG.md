@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extend `collect-diagnostics.sh` sanitizer to mask IPv4/IPv6, hardware/BIOS UUIDs, and usernames in paths — once enough real-world diag bundles surface the common patterns.
 - Promote Intel Arc A310 recipe from 🚧 to ✅ once the ≥2-week production-uptime threshold is confirmed met.
 - NVIDIA RTX 2000 Ada + RTX PRO 4500 Blackwell recipes (two Pro cards, same workstation, ML-inference workload — promote to ✅ after each clears its own ≥2-week threshold).
+- `vendor-reset` installation guide for Blackwell WPR2 reset bug — once Blackwell support in `gnif/vendor-reset` is confirmed.
+
+### Added
+- `docs/TROUBLESHOOTING.md`: new section "NVIDIA Blackwell: GPU Failed to Initialize on Second VM Start (WPR2 Reset Bug)" — root cause (GSP firmware WPR2 persists through PCIe FLR), contrast with AMD Reset Bug, short-term fix (host reboot), long-term fix pointer (`vendor-reset`).
+- `docs/vendors/nvidia-professional.md`: new subsection "Confirmed: Dual GPU to Same Linux VM — Docker Container Isolation" — documents `NVIDIA_VISIBLE_DEVICES` per-container GPU assignment, passthrough order (hostpci1 → GPU 0), verification commands, WPR2 cross-reference. Confirmed 2026-05-15 with RTX PRO 4500 + RTX 2000 Ada in simultaneous operation.
+
+### Changed
+- `docs/vendors/nvidia-professional.md`, RTX 2000 Ada section: driver updated to `nvidia-driver-595-server-open` (open kernel modules required for Ada Lovelace on this driver branch, same requirement as Blackwell); added dual-GPU-confirmed note; added `qm set` / `vfio.conf` independence gotcha (host VFIO binding and VM hostpci config are two independent steps).
 
 ## [1.1.0] — 2026-05-15
 

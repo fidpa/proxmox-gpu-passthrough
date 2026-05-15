@@ -61,8 +61,10 @@ Pro card passthrough often works with a **vanilla** QEMU config. Applying the Co
 - **Expected workload**: ML inference (smaller models, fp16 / int8 inference, classical CV)
 - **Why included**: Reference point for the Ada Pro lineage; low TDP makes it the "always-on" card alongside the Blackwell PRO 4500.
 - **Observed (2026-05-11)**: GPU was `(unbound)` on the Proxmox host out of the box — `nouveau` and `nvidiafb` listed as available modules but did not claim the device. The `softdep nouveau pre: vfio-pci` in `modprobe.d` is still recommended for robustness. Audio companion `02:00.1` had `snd_hda_intel` and required explicit unbind before VFIO could claim it.
-- **Driver confirmed**: `nvidia-driver-595-server` (Ubuntu 24.04 guest) — CUDA 13.2, `nvidia-smi` working inside Docker container via nvidia-container-toolkit 1.19.0.
+- **Driver confirmed**: `nvidia-driver-595-server-open` (Ubuntu 24.04 guest, kernel 6.8.0-111-generic) — CUDA 13.2, `nvidia-smi` working inside Docker container via nvidia-container-toolkit 1.19.0. Note: open kernel modules are required for Ada Lovelace on this driver branch (same requirement as Blackwell, see below).
 - **Container toolkit note**: Ubuntu 24.04 standard apt repos do **not** contain `nvidia-container-toolkit`. Must use NVIDIA's own apt repository (`nvidia.github.io/libnvidia-container`); the Ubuntu package appears to install but places no binaries.
+- **Dual-GPU operation confirmed (2026-05-15)**: Both RTX 2000 Ada and RTX PRO 4500 passed through to the same VM simultaneously (separate `hostpci` slots). GPU assignment to Docker containers via `NVIDIA_VISIBLE_DEVICES` — see [Two-Card-One-Host](#two-card-one-host-considerations) below.
+- **qm set must be run separately from vfio.conf**: Adding device IDs to `/etc/modprobe.d/vfio.conf` and rebooting binds the GPUs to vfio-pci on the host. But the VM doesn't see them until `qm set <vmid> -hostpciN <BDF>` is also run. These are two independent steps — a common source of confusion where host binding looks correct but VM config is missing the `hostpciN:` line.
 
 ## RTX PRO 4500 Blackwell — Hardware Notes (Blackwell-Generation Pro)
 
@@ -113,6 +115,39 @@ Running both Pro cards in the same workstation has its own gotchas:
 - **Slot routing** — prefer CPU-routed PCIe slots over chipset-routed for both cards; chipset slots usually share groups.
 - **TDP budget** — combined ~70 W (Ada) + ~200 W (Blackwell PRO 4500, full TDP) = ~270 W from PCIe + power connectors. PSU and cooling sized accordingly.
 - **Thermal coupling** — two-slot cards stacked in adjacent slots run hotter; verify single-slot RTX 2000 Ada's airflow isn't choked by the PRO 4500 Blackwell next to it.
+
+### Confirmed: Dual GPU to Same Linux VM — Docker Container Isolation
+
+Tested configuration (2026-05-15): RTX PRO 4500 as `hostpci1` (GPU 0 in guest) + RTX 2000 Ada as `hostpci2` (GPU 1 in guest), both passed through to the same Ubuntu 24.04 VM. Both GPUs fully operational simultaneously.
+
+**Container-level isolation via `NVIDIA_VISIBLE_DEVICES`**:
+
+```yaml
+# docker-compose.override.yml (pScan-specific, not committed to main repo)
+services:
+  ollama:          # Large VLM — needs high VRAM
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: "0"   # GPU 0 = RTX PRO 4500 Blackwell (32 GB)
+
+  paddleocr:       # OCR inference — smaller footprint
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: "1"   # GPU 1 = RTX 2000 Ada (16 GB)
+```
+
+The guest sees GPUs in passthrough order (`hostpci1` → GPU 0, `hostpci2` → GPU 1). Each container sees only its assigned GPU; `nvidia-smi` inside the container shows one device. Cross-container GPU access is not possible without explicit `NVIDIA_VISIBLE_DEVICES: all`.
+
+**Verification**:
+```bash
+# From host: confirm both GPUs have VRAM in use
+nvidia-smi --query-gpu=index,name,memory.used --format=csv,noheader
+# Expected:
+# 0, NVIDIA RTX PRO 4500 Blackwell, NNNN MiB   ← Ollama loaded model
+# 1, NVIDIA RTX 2000 Ada Generation, NNNN MiB  ← OCR models loaded
+```
+
+**WPR2 note**: The Blackwell WPR2 reset bug (see [TROUBLESHOOTING.md](../TROUBLESHOOTING.md#nvidia-blackwell-gpu-failed-to-initialize-on-second-vm-start-wpr2-reset-bug)) applies to the RTX PRO 4500 in this setup. RTX 2000 Ada (Ada Lovelace) has not triggered the same issue — Ada appears more tolerant of PCIe FLR across VM restarts, though vendor-reset is still recommended as a precaution.
 
 ## Contributing
 
