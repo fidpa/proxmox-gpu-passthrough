@@ -95,6 +95,47 @@ If fans stay full after driver loads:
 - **Intel Arc**: known issue on some boards with BIOS-side fan control conflicting with driver; usually resolves after one VM reboot
 - **AMD**: check for `vendor-reset` leaving GPU in weird state
 
+## nvidia-smi Reports "No devices found" (Linux Guest — Blackwell / Ada)
+
+**Symptom**: `nvidia-smi` returns `No devices found` or `No devices were found`. The NVIDIA kernel module *is* loaded (`lsmod | grep nvidia` shows `nvidia`, `nvidia_uvm`, etc.), and `lspci` shows the GPU. `dmesg` contains:
+
+```
+NVRM: The NVIDIA GPU 0000:XX:00.0 (PCI ID: 10de:XXXX)
+NVRM: installed in this system requires use of the NVIDIA open kernel modules.
+NVRM: GPU 0000:XX:00.0: RmInitAdapter failed! (0x22:0x56:1017)
+NVRM: GPU 0000:XX:00.0: rm_init_adapter failed, device minor number 0
+```
+
+**Root cause**: Blackwell (GB2xx/GB3xx) and Ada Lovelace GPUs require NVIDIA's open-source kernel modules. The proprietary closed-source `nvidia.ko` does not support these architectures. The standard `nvidia-driver-XXX-server` (or `nvidia-driver-XXX`) package installs the closed module.
+
+**Fix**:
+
+```bash
+# Ubuntu 24.04 — swap closed for open kernel module package
+sudo apt install nvidia-driver-595-server-open
+# apt automatically removes nvidia-driver-595-server and rebuilds via DKMS
+
+# Hot-reload without VM reboot:
+sudo modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia
+sudo modprobe nvidia
+# Verify:
+nvidia-smi
+```
+
+Replace `595` with your installed driver version. The open package variant is named `nvidia-driver-<VERSION>-open` (desktop) or `nvidia-driver-<VERSION>-server-open` (server/headless).
+
+**Affected architectures**: All Blackwell (GB1xx/GB2xx/GB3xx) and Ada Lovelace (AD1xx) GPUs. Turing (TU1xx) and Ampere (GA1xx) still work with either open or closed modules.
+
+**Live VFIO bind note**: If you update `vfio.conf` with new device IDs but don't reboot, the running `vfio-pci` kernel module instance doesn't know the new IDs. `echo <BDF> > /sys/bus/pci/drivers/vfio-pci/bind` will fail with `No such device`. Use `new_id` instead:
+
+```bash
+echo "10de 2c31" > /sys/bus/pci/drivers/vfio-pci/new_id   # RTX PRO 4500 GPU
+echo "10de 22e9" > /sys/bus/pci/drivers/vfio-pci/new_id   # RTX PRO 4500 Audio
+# The driver claims the devices automatically after new_id
+```
+
+---
+
 ## Still Stuck?
 
 1. Run `./scripts/collect-diagnostics.sh <vmid>` — bundles IOMMU groups, VFIO state, VM config, dmesg

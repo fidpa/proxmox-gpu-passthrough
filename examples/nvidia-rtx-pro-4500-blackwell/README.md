@@ -2,26 +2,97 @@
 
 Placeholder slot for the NVIDIA RTX PRO 4500 Blackwell (Professional / Workstation, Blackwell silicon, 32 GB GDDR7 ECC) passthrough recipe — will land here once the card has run an ML-inference workload for ≥2 weeks.
 
-> **Status**: 🚧 **Planned** — target hardware on the procurement path.
-> Promotes to ✅ once the ≥2-week uptime threshold ([CONTRIBUTING.md § 1](../../CONTRIBUTING.md#1-no-vendor-recipe-without-2-weeks-production)) is met under real ML-inference load.
+> **Status**: 🚧 **In validation** — hardware installed 2026-05-15, passthrough active, ≥2-week production uptime accumulating under real ML-inference (Ollama VLM, qwen3-vl:8b-instruct-q8_0).
+> Promotes to ✅ once the ≥2-week threshold ([CONTRIBUTING.md § 1](../../CONTRIBUTING.md#1-no-vendor-recipe-without-2-weeks-production)) is met.
 
-## Why Placeholder
+## Why Still a Placeholder
 
-This repo's rule is **no vendor recipe without ≥2 weeks of production validation on real hardware**. The RTX PRO 4500 Blackwell will be installed in a workstation alongside an RTX 2000 Ada (see [../nvidia-rtx-2000-ada/](../nvidia-rtx-2000-ada/)) and used for ML inference. Once the card has ≥2 weeks of uptime under real workload, the recipe lands here.
+This repo's rule is **no vendor recipe without ≥2 weeks of production validation on real hardware** (see [CONTRIBUTING.md](../../CONTRIBUTING.md)). The first session (2026-05-15) confirmed the passthrough works and the config shape below is correct. The full recipe lands here once ≥2 weeks of ML-inference workload have elapsed.
 
-## Anticipated Config Shape
+## ⚠️ Blackwell Critical: Open Kernel Modules Required
+
+**The most important Blackwell-specific finding before anything else:**
+
+Blackwell GPUs (GB2xx/GB3xx — including the RTX PRO 4500 GB203GL) **do not work with the proprietary NVIDIA kernel modules**. If you install the standard closed-source driver package (`nvidia-driver-XXX-server` on Ubuntu, or any non-open variant), you will see:
 
 ```
-args: (none expected -- Pro cards do NOT need kvm=off / -hypervisor)
-machine: pc-q35-9.2
+NVRM: The NVIDIA GPU 0000:02:00.0 (PCI ID: 10de:2c31)
+NVRM: installed in this system requires use of the NVIDIA open kernel modules.
+NVRM: GPU 0000:02:00.0: RmInitAdapter failed! (0x22:0x56:1017)
+NVRM: GPU 0000:02:00.0: rm_init_adapter failed, device minor number 0
+```
+
+`nvidia-smi` will report `No devices found` even though the kernel module is loaded. The fix:
+
+```bash
+# Ubuntu 24.04 — install the open kernel module variant
+sudo apt install nvidia-driver-595-server-open
+# (replaces nvidia-driver-595-server; DKMS builds the open module automatically)
+
+# Unload old closed modules, load new open ones (or just reboot the VM)
+sudo modprobe -r nvidia_uvm nvidia_drm nvidia_modeset nvidia
+sudo modprobe nvidia
+```
+
+This requirement applies to **all** Blackwell GPUs in Linux guests, not just Pro cards. The open kernel modules (`nvidia-open`) have been mandatory for Ada Lovelace and newer since NVIDIA deprecated proprietary modules for those architectures.
+
+See also: [TROUBLESHOOTING.md § nvidia-smi reports "No devices found"](../../docs/TROUBLESHOOTING.md#nvidia-smi-reports-no-devices-found-linux-guest-blackwell--ada).
+
+## Confirmed Config Shape
+
+Validated on Proxmox VE 9.1.1 / kernel 6.17.2-1-pve, AMD Ryzen 9 9900X host, Ubuntu 24.04 guest (kernel 6.8.0-111-generic):
+
+```
+args: (none -- Pro cards do NOT need kvm=off / -hypervisor)
+machine: q35
 bios: ovmf
 cpu: host
-balloon: 0
+balloon: 32768
 vga: none
-hostpci0: 0000:<BDF>,pcie=1,x-vga=0
+hostpci1: 0000:01:00,pcie=1
 ```
 
-Same shape as the RTX 2000 Ada example — both are NVIDIA Pro cards on the RTX Enterprise driver branch, both use the `nvidia-pro` profile from `scripts/generate-vm-args.sh` (which emits no custom args).
+Notes on the config:
+- **`hostpci1` not `hostpci0`**: In this setup `hostpci0` was already in use (NVMe passthrough). The index is arbitrary — use whatever slot is free.
+- **No function suffix**: `0000:01:00` (without `.0`) attaches all functions — GPU (`01:00.0`, `10de:2c31`) + audio companion (`01:00.1`, `10de:22e9`) — in a single line.
+- **No `x-vga`**: Card is used headless for ML inference. `x-vga=0` is implicit (and default) when `vga: none` is set.
+- **`cpu: host`**: mandatory for CUDA workloads.
+- **No extra `-cpu` flags**: Pro cards expect to see KVM. Do not apply Consumer Code-43 workarounds.
+
+Guest-side driver: `nvidia-driver-595-server-open`, nvidia-container-toolkit 1.19.0, CUDA 13.2.
+
+## Confirmed Hardware IDs
+
+| Function | PCI ID | Description |
+|----------|--------|-------------|
+| GPU | `10de:2c31` | GB203GL — RTX PRO 4500 Blackwell |
+| Audio | `10de:22e9` | NVIDIA Blackwell HD Audio companion |
+
+IOMMU group (AMD Ryzen 9 9900X / Granite Ridge platform): **clean isolated group**, GPU + audio companion only. No other devices share the group.
+
+## vfio.conf
+
+```
+# /etc/modprobe.d/vfio.conf
+options vfio-pci ids=10de:2c31,10de:22e9
+softdep snd_hda_intel pre: vfio-pci
+softdep nouveau pre: vfio-pci
+```
+
+**Audio companion note**: the audio companion (`10de:22e9`) had `snd_hda_intel` bound on first boot. The `softdep snd_hda_intel pre: vfio-pci` line prevents this on subsequent boots. For a live bind without reboot:
+
+```bash
+echo 0000:01:00.1 > /sys/bus/pci/drivers/snd_hda_intel/unbind
+# If the GPU IDs aren't yet known to the running vfio-pci module:
+echo "10de 2c31" > /sys/bus/pci/drivers/vfio-pci/new_id
+echo "10de 22e9" > /sys/bus/pci/drivers/vfio-pci/new_id
+# Verify
+for dev in 0000:01:00.0 0000:01:00.1; do
+  echo "$dev → $(basename $(readlink /sys/bus/pci/devices/$dev/driver))"
+done
+```
+
+Note: `echo <BDF> > /sys/bus/pci/drivers/vfio-pci/bind` fails with "No such device" if the device ID was not known to the running module instance (the IDs in `/etc/modprobe.d/vfio.conf` are only parsed at module load time). Use `new_id` for the live case.
 
 ## Why This Card Is Interesting (Beyond "It's a Pro Card")
 

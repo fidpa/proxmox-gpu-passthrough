@@ -1,8 +1,8 @@
 # NVIDIA Professional (RTX A / RTX Ada / RTX PRO Blackwell / Quadro)
 
-> 🚧 **Status**: Planned. Target hardware: **two Pro cards in one workstation** —
-> **RTX 2000 Ada Generation (16 GB GDDR6 ECC)** as the Ada-generation reference,
-> and **RTX PRO 4500 Blackwell (32 GB GDDR7)** as the Blackwell-generation reference.
+> 🚧 **Status**: In validation. Target hardware: **two Pro cards in one workstation** —
+> **RTX 2000 Ada Generation (16 GB GDDR6 ECC)** as the Ada-generation reference (installed 2026-05-11),
+> and **RTX PRO 4500 Blackwell (32 GB GDDR7)** as the Blackwell-generation reference (installed + passthrough active 2026-05-15).
 > Both targeted at ML-inference workload. Recipes promote from 🚧 to ✅ once each
 > card has cleared ≥2 weeks of production uptime per [CONTRIBUTING.md § 1](../../CONTRIBUTING.md#1-no-vendor-recipe-without-2-weeks-production).
 
@@ -66,18 +66,34 @@ Pro card passthrough often works with a **vanilla** QEMU config. Applying the Co
 
 ## RTX PRO 4500 Blackwell — Hardware Notes (Blackwell-Generation Pro)
 
-- **Vendor:Device ID**: `10de:???` — to be confirmed from actual card
-- **Architecture**: Blackwell (workstation silicon, not the Consumer GB20x line)
+- **Vendor:Device ID**: GPU `10de:2c31`, Audio companion `10de:22e9` — confirmed from hardware 2026-05-15
+- **Architecture**: Blackwell (GB203GL — workstation silicon)
 - **VRAM**: 32 GB GDDR7 with ECC
 - **PCIe**: 5.0 x16
-- **Expected workload**: ML inference (larger models — 32 GB headroom for 13B–34B-class quantized LLMs, larger transformer batches, multi-modal pipelines)
+- **TDP**: 200 W (requires external power connector — shipped with 600 W-rated 16-pin 12VHPWR/12V-2x6 cable)
+- **Active workload**: ML inference (Ollama VLM — qwen3-vl:8b-instruct-q8_0 + qwen3-vl:32b-instruct-q4_K_M pre-loaded)
 - **Why included**: Modern Blackwell silicon means it shares failure modes with **Consumer Blackwell cards** (ReBAR negotiation on 32 GB BAR, PCIe 5.0 link training) — but on the **Pro driver branch**, which avoids Code-43 flag-set entirely. Useful contrast for readers who otherwise have to triangulate between Consumer-Blackwell guides and Ada-Pro guides.
+- **Observed (2026-05-15)**: GPU was unbound on host out of the box (no NVIDIA driver on Proxmox host). Audio companion `01:00.1` had `snd_hda_intel` — required explicit unbind before VFIO could claim it. IOMMU group 14 on AMD Raphael/Granite Ridge: clean, GPU + audio companion only.
+- **Driver confirmed**: `nvidia-driver-595-server-open` (Ubuntu 24.04 guest, kernel 6.8.0-111-generic) — CUDA 13.2, `nvidia-smi` working inside Docker container via nvidia-container-toolkit 1.19.0. **Critical: closed-source driver (`nvidia-driver-595-server`) fails with `RmInitAdapter (0x22:0x56:1017)` — see below.**
 
-### Anticipated Quirks (Blackwell-Specific)
+### ⚠️ Blackwell Critical: Open Kernel Modules Required
 
-- **ReBAR on full 32 GB** — mainboard BIOS must map the full 32 GB BAR through the PCIe hierarchy; small-memory-map BIOSes silently fall back to 256 MB BAR with a massive perf hit. Verify with `lspci -vv -s <BDF>` showing the full BAR size, not the truncated fallback.
-- **PCIe 5.0 link training** — host slot must negotiate full PCIe 5.0 x16; under heavy thermal load some host/board combos drop to PCIe 4.0 / 3.0. Check with `lspci -vv` `LnkSta:` line during workload.
-- **GDDR7 ECC reporting** — `nvidia-smi -q -d ECC` should show ECC supported and active; default for Pro cards is usually enabled.
+Blackwell GPUs **do not work** with the proprietary NVIDIA kernel modules. The closed-source `nvidia.ko` fails to initialize Blackwell hardware:
+
+```
+NVRM: The NVIDIA GPU 0000:02:00.0 (PCI ID: 10de:2c31)
+NVRM: installed in this system requires use of the NVIDIA open kernel modules.
+NVRM: GPU 0000:02:00.0: RmInitAdapter failed! (0x22:0x56:1017)
+```
+
+`nvidia-smi` reports `No devices found` even with the module loaded. Fix: install `nvidia-driver-XXX-server-open` (or `nvidia-driver-XXX-open` for non-server builds). See [TROUBLESHOOTING.md § nvidia-smi reports "No devices found"](../TROUBLESHOOTING.md#nvidia-smi-reports-no-devices-found-linux-guest-blackwell--ada).
+
+### Confirmed Quirks (Blackwell-Specific — still accumulating)
+
+- **Open kernel modules mandatory** — confirmed critical, see above.
+- **ReBAR on full 32 GB** — not yet verified; mainboard BIOS must map the full 32 GB BAR through the PCIe hierarchy; small-memory-map BIOSes silently fall back to 256 MB BAR with a massive perf hit. Verify with `lspci -vv -s <BDF>` showing the full BAR size, not the truncated fallback.
+- **PCIe 5.0 link training** — not yet verified under sustained load; host slot must negotiate full PCIe 5.0 x16; under heavy thermal load some host/board combos drop to PCIe 4.0 / 3.0. Check with `lspci -vv` `LnkSta:` during workload.
+- **GDDR7 ECC reporting** — not yet verified; `nvidia-smi -q -d ECC` should show ECC supported and active; default for Pro cards is usually enabled.
 
 ## Anticipated Test Plan (per card)
 

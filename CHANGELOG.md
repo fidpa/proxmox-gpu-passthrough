@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned
+- Extend `collect-diagnostics.sh` sanitizer to mask IPv4/IPv6, hardware/BIOS UUIDs, and usernames in paths — once enough real-world diag bundles surface the common patterns.
+- Promote Intel Arc A310 recipe from 🚧 to ✅ once the ≥2-week production-uptime threshold is confirmed met.
+- NVIDIA RTX 2000 Ada + RTX PRO 4500 Blackwell recipes (two Pro cards, same workstation, ML-inference workload — promote to ✅ after each clears its own ≥2-week threshold).
+
+## [1.1.0] — 2026-05-15
+
+### Added
+- `docs/TROUBLESHOOTING.md`: new section "nvidia-smi Reports 'No devices found'
+  (Linux Guest — Blackwell / Ada)" — root cause (closed-source kernel modules do not
+  support Blackwell/Ada Lovelace), fix (`nvidia-driver-<VERSION>-server-open` or
+  `-open` variant), affected architectures, and live VFIO bind technique via
+  `new_id` (when device IDs are unknown to the already-loaded module instance).
+
 ### Changed
 - RTX 2000 Ada (`docs/vendors/nvidia-professional.md`, `examples/nvidia-rtx-2000-ada/README.md`,
   `README.md`): status Planned → In validation (first hardware session 2026-05-11).
@@ -14,11 +28,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CUDA compute 8.9, driver branch `nvidia-driver-595-server`. Documented Ubuntu 24.04
   gotcha: `nvidia-container-toolkit` is absent from standard apt repos — NVIDIA's own
   apt repository (`nvidia.github.io/libnvidia-container`) is required.
-
-### Planned
-- Extend `collect-diagnostics.sh` sanitizer to mask IPv4/IPv6, hardware/BIOS UUIDs, and usernames in paths — once enough real-world diag bundles surface the common patterns.
-- Promote Intel Arc A310 recipe from 🚧 to ✅ once the ≥2-week production-uptime threshold is confirmed met.
-- NVIDIA RTX 2000 Ada + RTX PRO 4500 Blackwell recipes (two Pro cards, same workstation, ML-inference workload — promote to ✅ after each clears its own ≥2-week threshold).
+- RTX PRO 4500 Blackwell (`examples/nvidia-rtx-pro-4500-blackwell/README.md`,
+  `docs/vendors/nvidia-professional.md`): status Planned → In validation (first hardware
+  session 2026-05-15). Confirmed vendor:device IDs (`10de:2c31` GPU, `10de:22e9` audio
+  companion), clean IOMMU group (AMD Raphael/Granite Ridge, group isolated to GPU +
+  audio companion only), config shape validated on Proxmox VE 9.1.1 / kernel
+  6.17.2-1-pve host, Ubuntu 24.04 guest (kernel 6.8.0-111-generic). Critical
+  Blackwell finding: open kernel modules mandatory — `nvidia-driver-595-server`
+  (closed) fails with `RmInitAdapter (0x22:0x56:1017)`; fix is
+  `nvidia-driver-595-server-open`. Audio companion had `snd_hda_intel` bound on
+  first boot; `softdep snd_hda_intel pre: vfio-pci` in `modprobe.d` prevents
+  recurrence.
 
 ## [1.0.0] — 2026-04-21
 
