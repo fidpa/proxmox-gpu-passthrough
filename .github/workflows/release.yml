@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   release:
+    name: Create Release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,15 +21,41 @@ jobs:
         id: changelog
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
-          awk -v ver="$VERSION" '
-            /^## \[/ { if (p) exit; if (index($0, ver)) p=1; next }
+
+          # Match the literal heading prefix "## [VERSION]" at column 1, via index()
+          # rather than a substring search: a heading whose headline mentions another
+          # version would match first and serve that section under the wrong tag.
+          # A regex would need bracket escaping that does not survive the shell.
+          HEADING="## [${VERSION}]"
+
+          awk -v head="$HEADING" '
+            index($0, head) == 1 { p=1; next }
+            /^## \[/ { if (p) exit }
             p { print }
-          ' CHANGELOG.md > release-notes.md
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          ' CHANGELOG.md | sed -e '/./,$!d' > release-notes.md
+          test -s release-notes.md || { echo "Empty release notes for $VERSION"; exit 1; }
+
+          # Release title: "vX.Y.Z: <headline>", taken from the part of the section
+          # heading after the date. Without it action-gh-release falls back to the bare
+          # tag name, which duplicates the version already shown next to the title.
+          HEADLINE=$(awk -v head="$HEADING" '
+            index($0, head) == 1 {
+              if (match($0, /- [0-9]{4}-[0-9]{2}-[0-9]{2}: /)) {
+                print substr($0, RSTART + RLENGTH); exit
+              }
+            }
+          ' CHANGELOG.md)
+          if [ -n "$HEADLINE" ]; then
+            echo "title=v${VERSION}: ${HEADLINE}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No headline in the '${HEADING}' heading; falling back to the tag name as release title."
+            echo "title=v${VERSION}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          name: ${{ steps.changelog.outputs.title }}
           body_path: release-notes.md
           draft: false
           prerelease: ${{ contains(github.ref, '-') }}
