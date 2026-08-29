@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Publish the outstanding NVIDIA Pro measurements: ECC status (`nvidia-smi -q -d ECC`), CUDA and NVENC benchmarks for both cards, and, Blackwell-specific, full 32 GB BAR exposure and PCIe 5.0 link width under sustained load.
 - A `vendor-reset` installation guide for the Blackwell WPR2 reset bug, once Blackwell support in `gnif/vendor-reset` is confirmed.
 
+## [1.3.1] - 2026-08-30: The README describes what the scripts actually do
+
+A pass over `README.md` against the code it describes, prompted by the same question
+the 1.3.0 changelog pass asked: does every sentence still hold. Three did not. The
+hookscript was described as clearing `reset_method` when it writes a token into it, the
+capability probe was credited to `dxdiag` for a number it reads through DXGI, and the
+`check-iommu-groups.sh` sample output in the Quick Start had a format the script does
+not produce. Three of the nine scripts had no mention in the README at all. No code,
+script, or documentation file outside `README.md` changed.
+
+### Changed
+- **The README no longer describes the reset hookscript as clearing `reset_method`.** `hookscripts/reset-method.sh` writes a token into `/sys/bus/pci/devices/<BDF>/reset_method` (`flr`, `bus`, `pm` or `device_specific`, default `bus`); it never clears the file. The old wording sent readers looking for a behaviour the script does not have.
+- **The capability probe's VRAM source is named correctly.** `capability-probe.ps1` reads `DXGI_ADAPTER_DESC1.DedicatedVideoMemory` by P/Invoke and falls back to `dxdiag`; the README credited `dxdiag` for the number. The WMI note now says what is actually wrong with `AdapterRAM` (a 32-bit field) instead of quoting a 2 GB cap.
+- **The two sample outputs in the Quick Start are the outputs the scripts produce.** `check-iommu-groups.sh` prints `IOMMU Group <n>:` with one indented line per device carrying BDF, bound driver and `lspci -nn` text; the README showed a shorter invented format. `generate-vm-args.sh --vendor intel-arc` now appears with its full flag list instead of a trailing ellipsis.
+- **A `Scripts` section documents all nine scripts and the hookscript with their usage lines.** `capability-probe.sh`, `collect-diagnostics.sh` and `install-reset-hook.sh` shipped undocumented in the README. The section replaces the former `Features` list, whose six bullets described four of the scripts under invented product names. The `collect-diagnostics.sh` row states what the sanitizer leaves untouched.
+- **The `Roadmap` section is now `Open Findings and Backlog` and no longer repeats the GPU table.** Promotion dates and production workloads stand once, in `Supported GPUs`; what remains open (Blackwell WPR2, ReBAR and PCIe 5.0 verification, AMD hardware) stands once, below it.
+- **Em dashes, arrows and the `>=` sign are gone from the README**, as they went from this changelog in 1.3.0. The status emoji stay, since the vendor docs and examples use them as the same table markers.
+- **Prose reworked away from template shapes.** The `**The Problem**:` and `**Why I Built This**:` labels are gone, the five-claim opening paragraph is split, and the `Provenance` section no longer opens by announcing its own honesty. The scope rule for the GPU table is stated as a rule rather than as a discipline claim.
+- **The README links `examples/` and `docs/vendors/nvidia-consumer.md` from the documentation table.** Both existed in the repository without a path from the front page.
+
 ## [1.3.0] - 2026-08-27: Release notes match the tags they are published under
 
 Editorial pass over all five published sections, checked against the tags each one
