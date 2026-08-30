@@ -101,7 +101,7 @@ qm set 102 --hostpci0 '0000:03:00,pcie=1' \
 # 6. Start VM, install driver, then verify
 qm start 102
 # Inside Windows: PowerShell as Admin
-powershell.exe -File capability-probe.ps1
+powershell.exe -ExecutionPolicy Bypass -File capability-probe.ps1
 ```
 
 > **Single host vs. cluster**: the Quick Start uses physical BDFs (`0000:03:00`). That

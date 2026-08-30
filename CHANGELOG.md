@@ -12,6 +12,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Publish the outstanding NVIDIA Pro measurements: ECC status (`nvidia-smi -q -d ECC`), CUDA and NVENC benchmarks for both cards, and, Blackwell-specific, full 32 GB BAR exposure and PCIe 5.0 link width under sustained load.
 - A `vendor-reset` installation guide for the Blackwell WPR2 reset bug, once Blackwell support in `gnif/vendor-reset` is confirmed.
 
+## [1.3.2] - 2026-08-30: The modprobe example covers the nova_core driver
+
+Two corrections that came in from outside. The `vfio.conf` example in
+`docs/HOST_SETUP.md` listed `i915`, `nouveau` and `amdgpu`, but not `nova_core`,
+the Rust NVIDIA driver that entered the mainline kernel in 6.15 under
+`CONFIG_NOVA_CORE`. On a host where that driver is built and loaded, it can bind
+the card before `vfio-pci` does, and the recipe as documented would leave
+passthrough failing for a reason the page never named. The second correction is
+smaller: the Quick Start invoked `capability-probe.ps1` without the execution
+policy flag that the Scripts table already carried two sections above, so the
+copied line fails on a default Windows install.
+
+### Added
+- **The `vfio.conf` example yields the GPU to VFIO on hosts running the nova_core driver.** `docs/HOST_SETUP.md` gains `softdep nova_core pre: vfio-pci` alongside the three existing entries. `nova_core` is the module name declared by `CONFIG_NOVA_CORE`, which is `default n` and first appears in the mainline tree in 6.15; `drivers/gpu/nova-core/Kconfig` does not exist in 6.14. A softdep naming a module that is absent stays inert, so the line costs nothing on hosts that never build it. Contributed by @kamahat in #1.
+
+### Changed
+- **The nova_core comment names the kernel version instead of a Proxmox release.** The contributed line described the driver as belonging to Proxmox 9. Whether a given Proxmox kernel carries `nova_core` follows from the kernel build, not from the Proxmox major version, so the comment in `docs/HOST_SETUP.md` states the upstream requirement instead.
+- **The Quick Start probe command runs on a default Windows install.** Step 6 in `README.md` called `powershell.exe -File capability-probe.ps1`; without `-ExecutionPolicy Bypass` that fails under the default `Restricted` policy. The Scripts table documented the flag all along, so the two places now agree.
+
 ## [1.3.1] - 2026-08-30: The README describes what the scripts actually do
 
 A pass over `README.md` against the code it describes, prompted by the same question

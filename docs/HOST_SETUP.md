@@ -76,7 +76,7 @@ options vfio-pci ids=8086:56a6,8086:4f92
 # Prevent the host driver from claiming the GPU before VFIO
 softdep i915 pre: vfio-pci        # Intel
 softdep nouveau pre: vfio-pci     # NVIDIA (if nouveau is loaded)
-softdep nova_core pre: vfio-pci   # NVIDIA Core driver (proxmox 9)
+softdep nova_core pre: vfio-pci   # NVIDIA (kernel 6.15+, if nova_core is built)
 softdep amdgpu pre: vfio-pci      # AMD
 ```
 
